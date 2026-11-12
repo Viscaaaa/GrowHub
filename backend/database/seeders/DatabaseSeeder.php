@@ -37,15 +37,16 @@ class DatabaseSeeder extends Seeder
             ['Success Story', 'success-story', 'Trophy', '#e11d48', 'Kisah sukses & perjalanan karier karyawan'],
             ['Group Discussion', 'group-discussion', 'MessagesSquare', '#0891b2', 'Diskusi terbuka antar karyawan'],
             ['Video & Photo', 'video-photo', 'Camera', '#142c14', 'Berbagi momen dan pengetahuan lewat visual'],
-        ])->map(fn ($c, $i) => Category::create([
-            'name' => $c[0], 'slug' => $c[1], 'icon' => $c[2], 'color' => $c[3], 'description' => $c[4], 'sort_order' => $i,
-        ]))->keyBy('slug');
+        ])->map(fn ($c, $i) => Category::updateOrCreate(
+            ['slug' => $c[1]],
+            ['name' => $c[0], 'icon' => $c[2], 'color' => $c[3], 'description' => $c[4], 'sort_order' => $i],
+        ))->keyBy('slug');
 
         // ------------------------------------------------------------------
         // Karyawan (username & password = NIP)
         // ------------------------------------------------------------------
         $people = [
-            ['1000000001', 'Administrator GrowHub', 'admin', 'Human Capital', 'HC System Administrator'],
+            ['1000000001', 'Administrator GrowHub', 'admin', 'Human Capital', 'HC System Administrator', 'it18.pepito@rcoid.com'],
             ['1000000002', 'Rina Kartika', 'reviewer', 'Human Capital', 'Learning & Development Lead'],
             ['1000000003', 'Bima Prasetyo', 'reviewer', 'Store Operations', 'Area Operations Manager'],
             ['202301001', 'Andi Saputra', 'employee', 'Store Operations', 'Store Manager'],
@@ -67,17 +68,23 @@ class DatabaseSeeder extends Seeder
             ['2023010017', 'Ayu Kusuma', 'employee', 'Finance', 'Tax Officer'],
         ];
 
-        $users = collect($people)->map(fn ($p) => User::create([
-            'nip' => $p[0],
-            'name' => $p[1],
-            'role' => $p[2],
-            'department' => $p[3],
-            'position' => $p[4],
-            'email' => 'it18.pepito@rcoid.com',
-            'password' => Hash::make($p[0]),
-            'location' => collect(['Jakarta', 'Bandung', 'Surabaya', 'Semarang', 'Medan', 'Makassar'])->random(),
-            'bio' => 'Bertumbuh bersama, berbagi untuk kemajuan.',
-        ]));
+        $users = collect($people)->map(function ($p) {
+            $preferredEmail = $p[5] ?? (Str::slug($p[1], '.').'@growhub.co.id');
+
+            return User::firstOrCreate(
+                ['nip' => $p[0]],
+                [
+                    'name' => $p[1],
+                    'role' => $p[2],
+                    'department' => $p[3],
+                    'position' => $p[4],
+                    'email' => $this->resolveUniqueEmail($p[0], $preferredEmail),
+                    'password' => Hash::make($p[0]),
+                    'location' => collect(['Jakarta', 'Bandung', 'Surabaya', 'Semarang', 'Medan', 'Makassar'])->random(),
+                    'bio' => 'Bertumbuh bersama, berbagi untuk kemajuan.',
+                ],
+            );
+        });
         $employees = $users->where('role', 'employee')->values();
         $reviewers = $users->whereIn('role', ['reviewer', 'admin'])->values();
 
@@ -92,11 +99,16 @@ class DatabaseSeeder extends Seeder
             ['Leadership Circle', 'Ruang belajar para pemimpin tim dan calon pemimpin.', 'Crown', '#f59e0b'],
             ['Wellness & Life', 'Tips kesehatan, work-life balance, dan kegiatan karyawan.', 'Leaf', '#142c14'],
         ])->map(function ($c) use ($users) {
-            $community = Community::create([
-                'name' => $c[0], 'slug' => Str::slug($c[0]), 'description' => $c[1],
-                'icon' => $c[2], 'color' => $c[3], 'created_by' => $users[0]->id,
-            ]);
-            $community->members()->attach($users->random(mt_rand(6, 14))->pluck('id'));
+            $community = Community::firstOrCreate(
+                ['slug' => Str::slug($c[0])],
+                [
+                    'name' => $c[0], 'description' => $c[1],
+                    'icon' => $c[2], 'color' => $c[3], 'created_by' => $users[0]->id,
+                ],
+            );
+            $community->members()->syncWithoutDetaching(
+                $users->random(mt_rand(6, 14))->pluck('id')->all()
+            );
 
             return $community;
         })->values();
@@ -145,6 +157,10 @@ class DatabaseSeeder extends Seeder
 
         foreach ($samples as $i => [$catSlug, $title, $body, $tags, $authorIdx]) {
             $author = $employees[$authorIdx % $employees->count()];
+            if (Content::where('user_id', $author->id)->where('title', $title)->exists()) {
+                continue;
+            }
+
             $publishedAt = $now->copy()->subDays(mt_rand(0, 40))->subHours(mt_rand(1, 20));
             $reviewer = $reviewers->random();
 
@@ -181,7 +197,10 @@ class DatabaseSeeder extends Seeder
             $likers = $users->where('id', '!=', $author->id)->random(mt_rand(3, 15));
             foreach ($likers as $liker) {
                 $at = $this->between($publishedAt, $now);
-                Like::create(['user_id' => $liker->id, 'content_id' => $content->id, 'created_at' => $at, 'updated_at' => $at]);
+                Like::firstOrCreate(
+                    ['user_id' => $liker->id, 'content_id' => $content->id],
+                    ['created_at' => $at, 'updated_at' => $at],
+                );
                 $tx[] = $this->tx($author->id, $points['like_received'], 'like_received', "Konten kamu disukai (#{$liker->id})", $content, $at);
             }
 
@@ -189,7 +208,10 @@ class DatabaseSeeder extends Seeder
             $savers = $users->where('id', '!=', $author->id)->random(mt_rand(0, 6));
             foreach ($savers as $saver) {
                 $at = $this->between($publishedAt, $now);
-                Save::create(['user_id' => $saver->id, 'content_id' => $content->id, 'created_at' => $at, 'updated_at' => $at]);
+                Save::firstOrCreate(
+                    ['user_id' => $saver->id, 'content_id' => $content->id],
+                    ['created_at' => $at, 'updated_at' => $at],
+                );
                 $tx[] = $this->tx($author->id, $points['save_received'], 'save_received', "Konten kamu disimpan (#{$saver->id})", $content, $at);
             }
 
@@ -230,26 +252,37 @@ class DatabaseSeeder extends Seeder
         foreach ($pendingSamples as [$catSlug, $title, $body, $tags, $authorIdx]) {
             $author = $employees[$authorIdx];
             $at = $now->copy()->subHours(mt_rand(2, 48));
-            $content = Content::create([
-                'user_id' => $author->id, 'category_id' => $categories[$catSlug]->id,
-                'title' => $title, 'body' => $body, 'tags' => $tags, 'status' => Content::STATUS_PENDING,
-                'created_at' => $at, 'updated_at' => $at,
-            ]);
-            $tx[] = $this->tx($author->id, $points['content_submitted'], 'content_submitted', "Mengunggah konten \"$title\"", $content, $at);
+            $content = Content::firstOrCreate(
+                ['user_id' => $author->id, 'title' => $title],
+                [
+                    'category_id' => $categories[$catSlug]->id,
+                    'body' => $body, 'tags' => $tags, 'status' => Content::STATUS_PENDING,
+                    'created_at' => $at, 'updated_at' => $at,
+                ],
+            );
+            if ($content->wasRecentlyCreated) {
+                $tx[] = $this->tx($author->id, $points['content_submitted'], 'content_submitted', "Mengunggah konten \"$title\"", $content, $at);
+            }
         }
 
-        Content::create([
-            'user_id' => $employees[0]->id, 'category_id' => $categories['tips-trick']->id,
-            'title' => 'Promo Produk Pribadi', 'body' => 'Halo semua, saya menjual produk skincare dengan harga spesial, silakan hubungi saya.',
-            'tags' => ['jualan'], 'status' => Content::STATUS_REJECTED, 'reviewer_id' => $reviewers[1]->id,
-            'review_note' => 'Konten bersifat promosi pribadi dan tidak relevan dengan pengembangan perusahaan.',
-            'reviewed_at' => $now->copy()->subDays(2),
-        ]);
-        Content::create([
-            'user_id' => $employees[0]->id, 'category_id' => $categories['best-practice']->id,
-            'title' => 'Checklist Opening Toko (Draft)', 'body' => 'Draft checklist opening toko yang masih saya lengkapi: cek kebersihan, cek kasir, cek suhu chiller ...',
-            'tags' => ['checklist'], 'status' => Content::STATUS_DRAFT,
-        ]);
+        Content::firstOrCreate(
+            ['user_id' => $employees[0]->id, 'title' => 'Promo Produk Pribadi'],
+            [
+                'category_id' => $categories['tips-trick']->id,
+                'body' => 'Halo semua, saya menjual produk skincare dengan harga spesial, silakan hubungi saya.',
+                'tags' => ['jualan'], 'status' => Content::STATUS_REJECTED, 'reviewer_id' => $reviewers[1]->id,
+                'review_note' => 'Konten bersifat promosi pribadi dan tidak relevan dengan pengembangan perusahaan.',
+                'reviewed_at' => $now->copy()->subDays(2),
+            ],
+        );
+        Content::firstOrCreate(
+            ['user_id' => $employees[0]->id, 'title' => 'Checklist Opening Toko (Draft)'],
+            [
+                'category_id' => $categories['best-practice']->id,
+                'body' => 'Draft checklist opening toko yang masih saya lengkapi: cek kebersihan, cek kasir, cek suhu chiller ...',
+                'tags' => ['checklist'], 'status' => Content::STATUS_DRAFT,
+            ],
+        );
 
         // ------------------------------------------------------------------
         // Learning Center
@@ -263,17 +296,24 @@ class DatabaseSeeder extends Seeder
             ['Data-Driven Analytics dengan Excel', 'Digital Skill', 'Intermediate', 'Analisis penjualan sederhana menggunakan Excel & Pivot.', '#142c14', 35, 30],
         ];
         foreach ($courses as [$title, $cat, $level, $summary, $color, $dur, $pts]) {
-            Course::create([
-                'title' => $title, 'slug' => Str::slug($title), 'category' => $cat, 'level' => $level,
-                'summary' => $summary, 'cover_color' => $color, 'duration_minutes' => $dur, 'points_reward' => $pts,
-                'body' => $this->courseBody($title, $summary),
-            ]);
+            Course::firstOrCreate(
+                ['slug' => Str::slug($title)],
+                [
+                    'title' => $title, 'category' => $cat, 'level' => $level,
+                    'summary' => $summary, 'cover_color' => $color, 'duration_minutes' => $dur, 'points_reward' => $pts,
+                    'body' => $this->courseBody($title, $summary),
+                ],
+            );
         }
 
         // ------------------------------------------------------------------
         // Aktivitas harian & streak (14 hari terakhir)
         // ------------------------------------------------------------------
         foreach ($users as $u) {
+            if (PointTransaction::where('user_id', $u->id)->where('action', 'daily_login')->exists()) {
+                continue;
+            }
+
             $streak = mt_rand(0, 14);
             for ($d = $streak - 1; $d >= 0; $d--) {
                 $tx[] = $this->tx($u->id, $points['daily_login'], 'daily_login', 'Aktivitas harian – streak hari ke-'.($streak - $d), null, $now->copy()->subDays($d)->setTime(8, mt_rand(0, 59)));
@@ -290,19 +330,41 @@ class DatabaseSeeder extends Seeder
         }
 
         // Sinkronkan total point
-        foreach ($users as $u) {
-            $u->forceFill(['points' => (int) PointTransaction::where('user_id', $u->id)->sum('points')])->save();
+        if (! empty($tx)) {
+            foreach ($users as $u) {
+                $u->forceFill(['points' => (int) PointTransaction::where('user_id', $u->id)->sum('points')])->save();
+            }
         }
 
         // Notifikasi contoh
         foreach ($users as $u) {
-            AppNotification::create([
-                'user_id' => $u->id, 'type' => 'system',
-                'title' => 'Selamat datang di GrowHub! 🌱',
-                'message' => 'Mulai bagikan pengetahuan dan pengalamanmu untuk mengumpulkan point dan naik level.',
-                'link' => '/create',
-            ]);
+            AppNotification::firstOrCreate(
+                [
+                    'user_id' => $u->id,
+                    'type' => 'system',
+                    'title' => 'Selamat datang di GrowHub! 🌱',
+                ],
+                [
+                    'message' => 'Mulai bagikan pengetahuan dan pengalamanmu untuk mengumpulkan point dan naik level.',
+                    'link' => '/create',
+                ],
+            );
         }
+    }
+
+    private function resolveUniqueEmail(string $nip, string $preferredEmail): string
+    {
+        $emailInUse = User::where('email', $preferredEmail)
+            ->where('nip', '!=', $nip)
+            ->exists();
+
+        if (! $emailInUse) {
+            return $preferredEmail;
+        }
+
+        [$local, $domain] = explode('@', $preferredEmail, 2);
+
+        return "{$local}+{$nip}@{$domain}";
     }
 
     private function tx(int $userId, int $points, string $action, string $desc, ?Content $ref, Carbon $at): array
