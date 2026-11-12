@@ -1,21 +1,6 @@
 import { defineStore } from 'pinia'
 import api from '@/api/client'
-
-function extractLoginErrorMessage(err) {
-  if (!err?.response) {
-    return 'Cannot connect to the GrowHub server. Please ensure the backend API is running on port 8001.'
-  }
-
-  const { status, data } = err.response
-  if (status === 404) {
-    return 'Login endpoint was not found on the API server (HTTP 404). Please verify the API points to GrowHub backend (port 8001).'
-  }
-  if (status >= 500) {
-    return data?.message || `Server error while logging in (HTTP ${status}). Please verify the GrowHub backend is running.`
-  }
-
-  return data?.message || data?.errors?.nip?.[0] || 'Login failed. Please check your Employee ID and password.'
-}
+import { getApiErrorMessage } from '@/utils/httpError'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -47,7 +32,7 @@ export const useAuthStore = defineStore('auth', {
         this.triggerEthicsNotice()
         return { success: true }
       } catch (err) {
-        return { success: false, message: extractLoginErrorMessage(err) }
+        return { success: false, message: getApiErrorMessage(err) }
       } finally {
         this.loading = false
       }

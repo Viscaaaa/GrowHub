@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getApiErrorMessage } from '@/utils/httpError'
 
 const defaultBaseURL = import.meta.env.VITE_API_URL || '/api'
 
@@ -22,6 +23,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    error.userMessage = getApiErrorMessage(error)
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('growhub_token')
       localStorage.removeItem('growhub_user')

@@ -17,7 +17,7 @@ function createBackendProxy(target) {
         if (!res.writableEnded) {
           res.end(
             JSON.stringify({
-              message: `Cannot connect to GrowHub backend at ${target}. Make sure the Laravel server is running on port 8001.`,
+              message: `Bad Gateway (502): Unable to connect to upstream API server at ${target}.`,
             }),
           )
         }

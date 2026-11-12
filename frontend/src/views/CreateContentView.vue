@@ -255,6 +255,7 @@ import {
   Rocket, Trophy, MessagesSquare, Camera, Building, Leaf, Crown, Users
 } from 'lucide-vue-next'
 import api from '@/api/client'
+import { getApiErrorMessage } from '@/utils/httpError'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 
@@ -383,8 +384,7 @@ const handleSubmit = async (actionType) => {
       router.push('/contributions?status=draft')
     }
   } catch (err) {
-    const msg = err.response?.data?.message || 'Failed to submit content.'
-    toastStore.error(msg)
+    toastStore.error(getApiErrorMessage(err, 'Failed to submit content.'))
   } finally {
     submitting.value = false
   }

@@ -409,6 +409,7 @@ import {
   Eye, EyeOff, ArrowRight, AlertCircle, KeyRound, Mail, CheckCircle2, RefreshCw
 } from 'lucide-vue-next'
 import api from '@/api/client'
+import { getApiErrorMessage } from '@/utils/httpError'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 
@@ -509,10 +510,7 @@ const sendOtp = async () => {
       startCountdown(data.retry_after)
       otpErrorMessage.value = data.message
     } else {
-      otpErrorMessage.value =
-        data.errors?.email?.[0] ||
-        data.message ||
-        'Gagal mengirim kode OTP ke email Anda.'
+      otpErrorMessage.value = getApiErrorMessage(err)
     }
   } finally {
     otpSending.value = false
@@ -536,11 +534,7 @@ const handleVerifyOtp = async () => {
     changeErrorMessage.value = ''
     toastStore.success('OTP terverifikasi! Silakan buat password baru Anda.')
   } catch (err) {
-    const data = err.response?.data || {}
-    otpErrorMessage.value =
-      data.errors?.otp?.[0] ||
-      data.message ||
-      'Kode OTP tidak valid atau telah kedaluwarsa.'
+    otpErrorMessage.value = getApiErrorMessage(err)
   } finally {
     verifyLoading.value = false
   }
@@ -646,10 +640,7 @@ const handleFirstChangePassword = async () => {
       otpStep.value = 'verify'
       otpErrorMessage.value = data.errors?.otp_token?.[0] || data.errors?.otp_verification_token?.[0]
     } else {
-      changeErrorMessage.value =
-        data.errors?.password?.[0] ||
-        data.message ||
-        'Gagal memperbarui password.'
+      changeErrorMessage.value = getApiErrorMessage(err)
     }
   } finally {
     changeLoading.value = false
