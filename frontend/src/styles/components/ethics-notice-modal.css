@@ -1,0 +1,199 @@
+/* =========================================================
+   GrowHub - Communication Ethics Login Popup Modal
+   ========================================================= */
+
+.ethics-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 36, 20, 0.62);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 9999;
+}
+
+.ethics-modal-card {
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 60px rgba(20, 44, 20, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ethics-modal-header {
+  background: linear-gradient(135deg, #142c14 0%, #1e8c45 100%);
+  color: #ffffff;
+  padding: 22px 26px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.ethics-header-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  display: grid;
+  place-items: center;
+  color: #fef08a;
+  flex-shrink: 0;
+}
+
+.ethics-header-text {
+  flex: 1;
+}
+
+.ethics-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.ethics-modal-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 4px;
+}
+
+.ethics-modal-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.ethics-modal-body {
+  padding: 20px 26px;
+  overflow-y: auto;
+  flex: 1;
+  background: #f8faf8;
+}
+
+.ethics-loading,
+.ethics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ethics-empty {
+  text-align: center;
+  padding: 32px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ethics-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow-xs);
+}
+
+.ethics-item-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  color: var(--dark);
+  font-size: 12px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ethics-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ethics-item-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ethics-item-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.ethics-item-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.ethics-modal-footer {
+  padding: 16px 26px;
+  background: #ffffff;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.ethics-footer-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-2);
+  flex: 1;
+  min-width: 200px;
+}
+
+.ethics-ack-btn {
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .ethics-modal-header,
+  .ethics-modal-body,
+  .ethics-modal-footer {
+    padding: 16px;
+  }
+
+  .ethics-item {
+    flex-wrap: wrap;
+  }
+
+  .ethics-ack-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
